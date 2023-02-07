@@ -109,7 +109,7 @@ class SE_Block(nn.Module):
         return out
     
 class ResNet(nn.Module):
-    def __init__(self, version, layers, se=False, groups=1, channels_per_group=64, num_classes=10):
+    def __init__(self, layers=[3, 4, 6, 3], version='B', se=False, groups=1, channels_per_group=64, num_classes=10):
         super().__init__()
         self.version = version
         self.se = se
@@ -186,9 +186,9 @@ class ResNet(nn.Module):
         return x
 
 class ResNext(ResNet):
-    def __init__(self, groups=32, channels_per_group=4):
-        super().__init__('B', [3, 4, 6, 3], groups=groups, channels_per_group=channels_per_group)
+    def __init__(self, layers=[3, 4, 6, 3], version='B', groups=32, channels_per_group=4):
+        super().__init__(layers=layers, version=version, groups=groups, channels_per_group=channels_per_group)
         
 class ResNet50(ResNet):
-    def __init__(self, groups=1, channels_per_group=4):
-        super().__init__('D', [3, 4, 6, 3], groups=groups, channels_per_group=channels_per_group)
+    def __init__(self, layers=[3, 4, 6, 3], version='D', groups=1, channels_per_group=4):
+        super().__init__(layers=layers, version=version, groups=groups, channels_per_group=channels_per_group)
