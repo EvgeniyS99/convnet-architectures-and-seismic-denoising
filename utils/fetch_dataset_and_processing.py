@@ -43,13 +43,14 @@ def find_test_files():
     return files, labels
 
 class ImageNet(Dataset):
-    def __init__(self, files, labels, mode):
+    def __init__(self, files, labels, mode, size=224):
         self.files = files
         self.labels = labels
         self.mode = mode
         self.label_encoder = LabelEncoder() 
         self.label_encoder.fit(self.labels)
-            
+        self.size = size
+    
     def __len__(self):
         return len(self.files)
     
@@ -61,7 +62,7 @@ class ImageNet(Dataset):
     def __getitem__(self, idx):
         #mg_path = os.path.join(self.img_dir, self.img_labels.iloc[idx, 0])
         transform = transforms.Compose([
-            transforms.Resize((224, 224)),
+            transforms.Resize((self.size, self.size)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
             
