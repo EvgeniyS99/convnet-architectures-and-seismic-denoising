@@ -3,17 +3,41 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score
 import numpy as np
 
-def imshow(inp, title=None, plt_ax=plt):
-    """For visualize tensors"""
-    inp = inp.numpy().transpose((1, 2, 0))
-    mean = np.array([0.485, 0.456, 0.406])
-    std = np.array([0.229, 0.224, 0.225])
+def imshow(inp, title=None, normalize=False, plt_ax=plt):
+    """Visualizes tensors"""
+    if normalize:
+        mean = np.array([0.485, 0.456, 0.406])
+        std = np.array([0.229, 0.224, 0.225])
+    else:
+        mean = 0
+        std = 1
+        
     inp = std * inp + mean
-    inp = np.clip(inp, 0, 1)
+    
+    if len(inp.shape) == 3:
+        inp = inp.numpy().astype(int).transpose((1, 2, 0))
+        inp = np.clip(inp, 0, 255)
+        
     plt_ax.imshow(inp)
+    plt_ax.axis('off')
+    plt_ax.grid(False)
+    
     if title is not None:
         plt_ax.set_title(title)
-    plt_ax.grid(False)
+        
+def plot_origin_data(dataset):
+    """Plot image and ground truth mask for segmentation task"""
+    plt.figure(figsize=(20, 6))
+
+    for i in range(6):
+        image, mask = dataset[i]
+        plt.subplot(2, 6, i+1)
+        plt.axis('off')
+        imshow(image)
+
+        plt.subplot(2, 6, i+7)
+        plt.axis('off')
+        imshow(mask)
 
 def plot_train_set():
     """Visualization of the predicted results on the train set"""
@@ -46,3 +70,30 @@ def plot_results(model, test_dataset):
         
         imshow(im_test.cpu(), title=predicted_class, plt_ax=fig_ax)
         #fig_ax.text(1, 50, f'{predicted_class}', c='white', fontsize=20)
+        
+def plot_predicted_mask(loader, model, num_images, height):
+    """
+    Plot images, their ground truth masks and 
+    predicted masks
+    """
+    images, masks = next(iter(loader))
+    images = images.to(device)
+    
+    model.eval()
+    
+    with torch.no_grad():
+        pred = model(images)
+        pred = pred.detach().cpu()
+        images = images.detach().cpu()
+        pred_mask = pred.argmax(dim=1)
+        
+    fig, axes = plt.subplots(num_images, 3, figsize=(20, height))
+    
+    axes[0, 0].set_title('Image')
+    axes[0, 1].set_title('Ground truth mask')
+    axes[0, 2].set_title('Predicted mask')
+    
+    for i in range(num_images):
+        imshow(images[i], plt_ax=axes[i, 0])
+        imshow(masks[i], plt_ax=axes[i, 1])
+        imshow(pred_mask[i], plt_ax=axes[i, 2])
