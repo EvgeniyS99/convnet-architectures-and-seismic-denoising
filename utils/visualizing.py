@@ -2,12 +2,14 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score
 import numpy as np
+from IPython.display import clear_output
+import torch
 
-def imshow(inp, title=None, normalize=False, plt_ax=plt):
+def imshow(inp, mean=np.array([0.485, 0.456, 0.406]), std=np.array([0.229, 0.224, 0.225]), title=None, normalize=False, plt_ax=plt):
     """Visualizes tensors"""
     if normalize:
-        mean = np.array([0.485, 0.456, 0.406])
-        std = np.array([0.229, 0.224, 0.225])
+        mean = mean
+        std = std
     else:
         mean = 0
         std = 1
@@ -71,7 +73,7 @@ def plot_results(model, test_dataset):
         imshow(im_test.cpu(), title=predicted_class, plt_ax=fig_ax)
         #fig_ax.text(1, 50, f'{predicted_class}', c='white', fontsize=20)
         
-def plot_predicted_mask(loader, model, num_images, height):
+def plot_predicted_mask(loader, model, num_images, height, device):
     """
     Plot images, their ground truth masks and 
     predicted masks
@@ -97,3 +99,28 @@ def plot_predicted_mask(loader, model, num_images, height):
         imshow(images[i], plt_ax=axes[i, 0])
         imshow(masks[i], plt_ax=axes[i, 1])
         imshow(pred_mask[i], plt_ax=axes[i, 2])
+        
+def plot_during_epoch(loss_during_epoch, losses, metrics):
+    """Plots losses and metrics during one epoch and also vs epoch"""
+    fig, axes = plt.subplots(1, 3, figsize=(12, 6))
+    clear_output(wait=True)
+                        
+    axes[0].plot(loss_during_epoch)
+    axes[0].set_xlabel('batch iter')
+    axes[0].set_ylabel('loss during epoch')
+                        
+    if losses:
+        axes[1].plot(losses['train'], label='train loss')
+        axes[1].plot(losses['val'], label='val loss')
+        axes[1].set_xlabel('epoch')
+        axes[1].set_ylabel('loss')
+        axes[1].legend()
+                            
+    if metrics:
+        axes[2].plot(metrics['train'], label='train miou')
+        axes[2].plot(metrics['val'], label='val miou')
+        axes[2].set_xlabel('epoch')
+        axes[2].set_ylabel('miou')
+        axes[2].legend()
+                        
+    plt.show()
