@@ -7,8 +7,9 @@ from tqdm import tqdm, tqdm_notebook
 import pickle
 import torch.nn.functional as F
 import numpy as np
+from utils.visualizing import plot_during_epoch
 
-def train(model, opt, loss_fn, lr_scheduler, epochs, train_data, val_data, name, path, task, segmentation_metrics=None, device='cpu'):
+def train(model, opt, metrics_function, loss_fn, lr_scheduler, epochs, train_data, val_data, name, path, device='cpu'):
     """Train loop for classification and segmentations tasks"""
     losses = {'train': [], 'val': []}
     metrics = {'train': [], 'val': []}
@@ -41,65 +42,28 @@ def train(model, opt, loss_fn, lr_scheduler, epochs, train_data, val_data, name,
                     if phase == 'train':
                         loss_value.backward()
                         opt.step()
-                        
-                if task == 'classification':   
-                    preds = y_pred.argmax(-1)
-                    corrects = (preds == y_batch).float()
-                    running_metrics += corrects.mean()
-                    
-                elif task == 'segmentation':
-                    if segmentation_metrics is None:
-                        segmentation_metrics = mIoU
-                    running_metrics += segmentation_metrics(y_pred, y_batch)
-                    
-                else:
-                    raise ValueError('There is only classification and segmentation tasks')
-                
+               
+                running_metrics += metrics_function(y_pred, y_batch)
                 running_loss += loss_value.item()
                 
                 # plot metrics and losses during the one epoch
                 if phase == 'train':
                     loss_during_epoch.append(loss_value.item())
                     
-                    if (i + 1) % 3 == 0:
-                        fig, axes = plt.subplots(1, 3, figsize=(12, 6))
-                        clear_output(wait=True)
-                        
-                        axes[0].plot(loss_during_epoch)
-                        axes[0].set_xlabel('batch iter')
-                        axes[0].set_ylabel('loss during epoch')
-                        
-                        if losses:
-                            axes[1].plot(losses['train'], label='train loss')
-                            axes[1].plot(losses['val'], label='val loss')
-                            axes[1].set_xlabel('epoch')
-                            axes[1].set_ylabel('loss')
-                            axes[1].legend()
-                            
-                        if metrics:
-                            axes[2].plot(metrics['train'], label='train miou')
-                            axes[2].plot(metrics['val'], label='val miou')
-                            axes[2].set_xlabel('epoch')
-                            axes[2].set_ylabel('miou')
-                            axes[2].legend()
-                        
-                        plt.show()
+                    if (i + 1) % 50 == 0:
+                        plot_during_epoch(loss_during_epoch, losses, metrics)
             
             epoch_loss = running_loss / len(dataloader)
-            
-            if task == 'classification':
-                running_metrics = running_metrics.cpu()
-                
             epoch_metrics = running_metrics / len(dataloader)
             
-            if phase == 'train':
-                lr_scheduler.step()
+            if phase == 'val':
+                lr_scheduler.step(epoch_loss)
             
             # logging losses and matrics
             losses[phase].append(epoch_loss)
             metrics[phase].append(epoch_metrics)
             
-            # save model weights
+            # save model weights (add saving the loss and scheduler)
             if phase == 'val' and epoch_metrics > max_metrics:
                 model_weights = model.state_dict()
                 torch.save(model_weights, path)
@@ -120,8 +84,15 @@ def train(model, opt, loss_fn, lr_scheduler, epochs, train_data, val_data, name,
 def step_scheduler(opt, step_size, gamma):
     return torch.optim.lr_scheduler.StepLR(opt, step_size=step_size, gamma=gamma)
 
-def mIoU(pred, true, num_classes=151):
+def accuracy(pred, true):
+    """Accuracy metrics for classfication task"""
+    pred = pred.argmax(-1)
+    corrects = (preds == y_batch).float()
+    
+    return corrects.mean().cpu()
 
+def mIoU(pred, true, num_classes=151):
+    """Mean IoU for segmentation task"""
     pred = F.softmax(pred, dim=1)
     pred = pred.argmax(dim=1).squeeze(1)
     pred = pred.cpu() 
