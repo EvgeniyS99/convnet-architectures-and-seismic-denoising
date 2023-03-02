@@ -41,38 +41,6 @@ def find_test_files():
     
     return files, labels
 
-def find_train_val_files_adedataset():
-    
-    train_val_images = []
-    train_val_masks = []
-    root_images = 'ADEChallengeData2016/images/training'
-    root_masks = 'ADEChallengeData2016/annotations/training'
-    
-    for file in sorted(os.listdir(root_images)):
-        train_val_images.append(os.path.join(root_images, file))
-
-    for file in sorted(os.listdir(root_masks)):
-        train_val_masks.append(os.path.join(root_masks, file))
-        
-    return train_val_images, train_val_masks
-
-def find_test_adedataset():
-    
-    test_images = []
-    test_masks = []
-    root_images = 'ADEChallengeData2016/images/validation'
-    root_masks = 'ADEChallengeData2016/annotations/validation'
-    
-    for file in sorted(os.listdir(root_images)):
-        if file.endswith('.jpg'):
-            test_images.append(os.path.join(root_images, file))
-
-    for file in sorted(os.listdir(root_masks)):
-        if file.endswith('.png'):
-            test_masks.append(os.path.join(root_masks, file))
-        
-    return test_images, test_masks
-
 class ImageNet(Dataset):
     def __init__(self, files, labels, mode, size=224):
         self.files = files
@@ -113,38 +81,43 @@ class ImageNet(Dataset):
     
 class AdeDataset(Dataset):
     
-    def __init__(self, images, masks, mode, transforms=None, size=256):
-        self.images = images
-        self.masks = masks
+    def __init__(self, mode, root='ADEChallengeData2016', transforms=None, size=256):
+        self.images_path = os.path.join(root, f'images/{mode}')
+        self.masks_path = os.path.join(root, f'annotations/{mode}')
+        self.images = sorted(os.listdir(self.images_path))
+        self.masks = sorted(os.listdir(self.masks_path))
         self.mode = mode
         self.size = size
         self.transforms = transforms
-        self.test_transforms = A.Compose([
-                A.Resize(size, size),
-                #A.Normalize(mean=[], std=[]),
-                ToTensorV2()   
-            ])
+        self.basic_transforms = A.Compose([
+            A.Resize(size, size),
+            #A.Normalize(mean=[], std=[]),
+            ToTensorV2()
+        ])
+        
+        for file in self.images:
+            if file.endswith('.ipynb_checkpoints'):
+                self.images.remove(file)
     
     def __len__(self):
         return len(self.images)
 
     def __getitem__(self, idx):
         
-        image = cv2.imread(self.images[idx], cv2.COLOR_BGR2RGB)
+        image = cv2.imread(os.path.join(self.images_path, self.images[idx]), cv2.COLOR_BGR2RGB)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        mask = cv2.imread(self.masks[idx], cv2.IMREAD_UNCHANGED)
+        mask = cv2.imread(os.path.join(self.masks_path, self.masks[idx]), cv2.IMREAD_UNCHANGED)
         
-        if self.mode == 'train' or self.mode == 'val':
-            if self.transforms is not None:
-                t = self.transforms(image=image, mask=mask)
-                image = t['image'].float()
-                mask = t['mask'].long()
-            else:
-                image = torch.from_numpy(image).float()
-                mask = torch.from_numpy(mask).long()
-                
-        elif self.mode == 'test':
-            t = self.test_transforms(image=image, mask=mask)
+        if self.transforms is not None and self.mode == 'training':
+            t = self.transforms(image=image, mask=mask)
+            image = t['image'].float()
+            mask = t['mask'].long()
+        elif self.transforms is not None and self.mode == 'validation':
+            t = self.basic_transforms(image=image, mask=mask)
+            image = t['image'].float()
+            mask = t['mask'].long()
+        else:
+            t = self.basic_transforms(image=image, mask=mask)
             image = t['image'].float()
             mask = t['mask'].long()
         
