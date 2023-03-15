@@ -5,16 +5,8 @@ import numpy as np
 
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, k=1, mode='expansion'):
+    def __init__(self, in_channels, out_channels, mode='expansion'):
         super().__init__()
-        
-        if mode == 'expansion':
-            out_channels = in_channels * k
-        else:
-            out_channels = in_channels // k
-            
-        if in_channels == 3:
-            out_channels = 64
         
         self.conv_block = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False),
@@ -29,14 +21,13 @@ class ConvBlock(nn.Module):
         out = self.conv_block(x)
         
         return out
-
+    
 class UpConvBlock(nn.Module):
-    def __init__(self, in_channels, k):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
-        out_channels = in_channels // k
         
         self.upsample = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2)
-        self.conv_block = ConvBlock(in_channels, k, mode='reduction')
+        self.conv_block = ConvBlock(in_channels, out_channels, mode='reduction')
         
     def forward(self, x, shortcut):
         
@@ -45,7 +36,7 @@ class UpConvBlock(nn.Module):
         out = self.conv_block(x)
         
         return out
-
+        
 
 class Unet(nn.Module):
     def __init__(self, num_classes=151):
@@ -53,24 +44,24 @@ class Unet(nn.Module):
     
         # encoder
         self.encoder = nn.Sequential(
-            ConvBlock(3),
-            ConvBlock(64, 2),
-            ConvBlock(128, 2),
-            ConvBlock(256, 2),
+            ConvBlock(3, 64),
+            ConvBlock(64, 128),
+            ConvBlock(128, 256),
+            ConvBlock(256, 512),
         )
         
         # max pooling
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
         
         # bottleneck
-        self.bottleneck = ConvBlock(512, 2)
+        self.bottleneck = ConvBlock(512, 1024)
 
         # decoder
         self.decoder = nn.Sequential(
-            UpConvBlock(1024, 2),
-            UpConvBlock(512, 2),
-            UpConvBlock(256, 2),
-            UpConvBlock(128, 2)  
+            UpConvBlock(1024, 512),
+            UpConvBlock(512, 256),
+            UpConvBlock(256, 128),
+            UpConvBlock(128, 64)  
         )
 
         self.final = nn.Conv2d(in_channels=64, out_channels=num_classes, kernel_size=1)
