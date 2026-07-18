@@ -6,8 +6,10 @@ The project covers AlexNet, VGG, ResNet, EfficientNet, and U-Net. The classifica
 
 ## Contents
 
-- `train_cnn_1.ipynb` — training and evaluation of AlexNet, VGG, and ResNet.
 - `models/` — model implementations.
-- `notebooks_with_experiments/` — additional architecture experiments.
+- `notebooks_with_experiments/` — training and evaluation notebooks, including `train_cnn_1.ipynb`.
 - `results/` — experiment and evaluation notebooks.
-- `utils/` — dataset, training, inference, and visualization utilities.
+- `fetch_dataset_and_processing.py` — dataset discovery, preprocessing, and dataset classes.
+- `train_loop.py` — shared training loops and metrics.
+- `inference.py` — model inference helpers.
+- `visualizing.py` — dataset, prediction, and training visualizations.

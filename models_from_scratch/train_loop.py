@@ -7,7 +7,7 @@ from tqdm import tqdm, tqdm_notebook
 import pickle
 import torch.nn.functional as F
 import numpy as np
-from utils.visualizing import plot_during_epoch
+from visualizing import plot_during_epoch
 
 def train(model, opt, metrics_function, loss_fn, lr_scheduler, epochs, train_data, val_data, name, path, device='cpu'):
     """Train loop for classification and segmentations tasks"""
